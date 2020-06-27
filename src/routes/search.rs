@@ -9,6 +9,9 @@ use std::collections::{HashMap, VecDeque};
 use std::error::Error;
 
 use crate::database::*;
+use futures_timer::Delay;
+use futures::TryFutureExt;
+use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -81,11 +84,16 @@ impl Document for SearchMod {
 
 #[derive(Serialize, Deserialize)]
 pub struct SearchRequest {
-    q: Option<String>,
-    f: Option<String>,
-    v: Option<String>,
-    o: Option<String>,
-    s: Option<String>,
+    #[serde(rename = "q")]
+    query: Option<String>,
+    #[serde(rename = "f")]
+    filters: Option<String>,
+    #[serde(rename = "v")]
+    version: Option<String>,
+    #[serde(rename = "o")]
+    offset: Option<String>,
+    #[serde(rename = "s")]
+    index: Option<String>,
 }
 
 #[post("search")]
@@ -93,12 +101,11 @@ pub async fn search_post(
     web::Query(info): web::Query<SearchRequest>,
     hb: Data<Handlebars<'_>>,
 ) -> HttpResponse {
-    let results = search(web::Query(info));
-
+    let results = search(&info);
     let data = json!({
+        "query": info,
         "results": results,
     });
-
     let body = hb.render("search-results", &data).unwrap();
 
     HttpResponse::Ok().body(body)
@@ -109,9 +116,10 @@ pub async fn search_get(
     web::Query(info): web::Query<SearchRequest>,
     hb: Data<Handlebars<'_>>,
 ) -> HttpResponse {
-    let results = search(web::Query(info));
+    let results = search(&info);
 
     let data = json!({
+        "query": info,
         "results": results,
     });
 
@@ -120,40 +128,40 @@ pub async fn search_get(
     HttpResponse::Ok().body(body)
 }
 
-fn search(web::Query(info): web::Query<SearchRequest>) -> Vec<SearchMod> {
+fn search(info: &SearchRequest) -> Vec<SearchMod> {
     let client = Client::new("http://localhost:7700", "");
 
-    let search_query: String;
-    let mut filters = "".to_string();
+    let search_query: &str;
+    let mut filters = String::new();
     let mut offset = 0;
-    let mut index = "relevance".to_string();
+    let mut index = "relevance";
 
-    match info.q {
+    match info.query.as_ref() {
         Some(q) => search_query = q,
-        None => search_query = "{}{}{}".to_string(),
+        None => search_query = "{}{}{}",
     }
 
-    if let Some(f) = info.f {
-        filters = f;
+    if let Some(f) = info.filters.as_ref() {
+        filters = f.clone();
     }
 
-    if let Some(v) = info.v {
+    if let Some(v) = info.version.as_ref() {
         if filters.is_empty() {
-            filters = v;
+            filters = v.clone();
         } else {
             filters = format!("({}) AND ({})", filters, v);
         }
     }
 
-    if let Some(o) = info.o {
+    if let Some(o) = info.offset.as_ref() {
         offset = o.parse().unwrap();
     }
 
-    if let Some(s) = info.s {
+    if let Some(s) = info.index.as_ref() {
         index = s;
     }
 
-    let mut query = Query::new(&search_query).with_limit(10).with_offset(offset);
+    let mut query = Query::new(search_query).with_limit(10).with_offset(offset);
 
     if !filters.is_empty() {
         query = query.with_filters(&filters);
@@ -167,15 +175,14 @@ fn search(web::Query(info): web::Query<SearchRequest>) -> Vec<SearchMod> {
 TODO This method needs a lot of refactoring. Here's a list of changes that need to be made:
  - Move Curseforge Indexing to another method/module
  - Get rid of the 4 indexes (when MeiliSearch updates) and replace it with different rules
- - Cleanup this code (it's very messy)
  - Remove code fragment duplicates
  */
 
-pub async fn index_mods(client: mongodb::Client) -> Result<(), Box<dyn Error>>{
+pub async fn index_mods(db: mongodb::Client) -> Result<(), Box<dyn Error>>{
     let mut docs_to_add: Vec<SearchMod> = vec![];
 
-    /*docs_to_add.append(&mut index_database(client).await?);
-    docs_to_add.append(&mut index_curseforge().await?);*/
+    docs_to_add.append(&mut index_database(db.clone()).await?);
+    //docs_to_add.append(&mut index_curseforge(1, 400000).await?);
 
     //Write Indexes
     //Relevance Index
@@ -266,20 +273,23 @@ async fn index_database(client: mongodb::Client) -> Result<Vec<SearchMod>,  Box<
     Ok(docs_to_add)
 }
 
-async fn index_curseforge() ->  Result<Vec<SearchMod>,  Box<dyn Error>>{
+async fn index_curseforge(start_index: i32, end_index: i32) ->  Result<Vec<SearchMod>,  Box<dyn Error>>{
     info!("Indexing curseforge mods!");
 
     let mut docs_to_add: Vec<SearchMod> = vec![];
 
     let res = reqwest::Client::new().post("https://addons-ecs.forgesvc.net/api/v2/addon")
         .header(reqwest::header::CONTENT_TYPE, "application/json")
-        .body(format!("{:?}", (1..400000).collect::<Vec<_>>()))
+        .body(format!("{:?}", (start_index..end_index).collect::<Vec<_>>()))
         .send().await?;
 
     let text = &res.text().await?;
     let curseforge_mods : Vec<CurseForgeMod> = serde_json::from_str(text)?;
 
+    let mut max_index = 0;
+
     for curseforge_mod in curseforge_mods {
+        max_index = curseforge_mod.id;
         if curseforge_mod.game_slug != "minecraft" || !curseforge_mod.website_url.contains("/mc-mods/") { continue; }
 
         let mut mod_game_versions = vec![];
@@ -397,6 +407,7 @@ async fn index_curseforge() ->  Result<Vec<SearchMod>,  Box<dyn Error>>{
         })
     }
 
+    //TODO Reindex every hour for new mods.
     Ok(docs_to_add)
 }
 

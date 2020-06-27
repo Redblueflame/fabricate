@@ -3,9 +3,10 @@
     height: 33px;
     width: 175px;
 
-    background-color: white;
+	color: var(--content-text);
+    background-color: var(--content-background);
     border-radius: 5px;
-    border: 1px solid darkgrey;
+    border: 1px solid var(--border);
 }
 
 .versions {
@@ -51,10 +52,10 @@
     margin: 0;
 
     font-weight: bold;
-    color: black;
-    background-color: white;
-    border-bottom: 1px solid darkgrey;
-    border-top: 1px solid darkgrey;
+    color: var(--content-text);
+    background-color: var(--content-background);
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
 
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -82,9 +83,10 @@
 
     border-radius: 5px;
     padding: 0 10px;
-    background-color: #ffffff;
+	color: var(--content-text);
+    background-color: var(--content-background);
     background-image: none;
-    border: 1px solid darkgrey;
+    border: 1px solid var(--border);
 }
 
 .categories {
@@ -139,11 +141,14 @@
 .search-bar {
     position: -webkit-sticky !important;
     position: sticky !important;
+	color: var(--content-text);
+	background-color: var(--content-background);
+	border-color: var(--border);
     height: 2em;
-    margin-top: 30px;
-    margin-bottom: 15px;
+    margin: 30px auto 15px auto;
     top: 80px;
-    width: 100%;
+    width: calc(100% - 20px);
+    display: block;
 }
 
 .mod-info {
@@ -151,6 +156,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .mod-info img {
@@ -158,9 +164,22 @@
     padding: 0;
 }
 
-.mod-info p {
+.mod-info span {
     font-size: 12px;
-    padding: 0 15px 0 5px !important;
+    padding-right: 15px;
+    white-space: nowrap;
+}
+.mod-info > span > img {
+    padding-right: 5px;
+    vertical-align: top;
+}
+.loader-icons > * {
+    vertical-align: top;
+    white-space: nowrap;
+    display: inline-block;
+}
+.loader-icons img {
+    padding-right: 5px;
 }
 
 .results {
@@ -168,18 +187,27 @@
     margin: 0 auto;
 }
 
+.search-error {
+    text-align: center;
+    word-break: break-word;
+}
 .result {
     display: flex;
-    height: 100px;
-    margin: 15px auto;
+    min-height: 100px;
+    margin: 15px 5px;
     padding: 5px;
-    width: 100%;
+    width: calc(100% - 20px);
     flex-direction: row;
     align-items: center;
-    background-color: white;
+    background-color: var(--content-background);
 }
 
 .result-image {
+    object-fit: scale-down;
+    padding: 0 10px 0 5px;
+    min-width: 75px;
+}
+.badge-image {
     object-fit: scale-down;
     padding: 0 10px 0 5px;
 }
@@ -189,21 +217,38 @@
     flex-direction: column;
 }
 
-.result-info * {
+.result-info > * {
     padding: 0 5px 0 0;
     margin: 0;
 }
 
 .result-title {
-    display: flex;
-    flex-direction: row;
-    align-items: baseline;
     text-decoration: none;
+}
+.result-title * {
+    display: inline;
+    padding-right: 5px;
+}
+.result-name > * {
+    margin: 0;
+}
+.result-author-container {
+    white-space: nowrap;
+    display: inline-block;
+}
+
+@media screen and (max-width: 1340px) {
+    .result-badge.result-badge {
+        width: initial;
+    }
+    .result-badge > p {
+        display: none;
+    }
 }
 
 .result-name {
     text-decoration: none;
-    color: #0b75d8;
+    color: var(--highlight);
 }
 
 .result-author {
@@ -249,6 +294,10 @@
     background-color: #1e2d44;
 }
 
+.forge-badge img {
+    width: 23px;
+}
+
 .fabric-badge {
     color: #585849;
     background-color: #fffdd0;
@@ -256,41 +305,42 @@
 
 .tech-badge {
     color: white;
-    background-color: red;
+    background-color: var(--tech-color);
 }
 
 .adventure-badge {
     color: white;
-    background-color: saddlebrown;
+    background-color: var(--adventure-color);
 }
 
 .magic-badge {
     color: white;
-    background-color: rebeccapurple;
+    background-color: var(--magic-color);
 }
 
 .utility-badge {
     color: white;
-    background-color: orangered;
+    background-color: var(--utility-color);
 }
 
 .decoration-badge {
     color: white;
-    background-color: #2f92d8;
+    background-color: var(--decoration-color);
 }
 
 .world-badge {
-    background-color: yellow;
+	color: white;
+	background-color: var(--world-color);
 }
 
 .library-badge {
     color: white;
-    background-color: orange;
+    background-color: var(--library-color);
 }
 
 .cursed-badge {
     color: white;
-    background-color: palevioletred;
+    background-color: var(--cursed-color);
 }
 
 .cursed-badge img {
@@ -299,34 +349,36 @@
 
 .misc-badge {
     color: white;
-    background-color: deepskyblue;
+    background-color: var(--misc-color);
 }
 
 .storage-badge {
-    color: wheat;
-    background-color: #e1a15a;
+    color: white;
+    background-color: var(--storage-color);
 }
 
 
 .food-badge {
     color: white;
-    background-color: royalblue;
+    background-color: var(--food-color);
 }
 
 .equipment-badge {
     color: white;
-    background-color: black;
+    background-color: var(--equipment-color);
 }
 
 .forge {
-    padding-top: 5px !important;
+	height: 12px;
+	fill: var(--forge-color);
 }
 
 .back-to-top {
     position: fixed;
     top: 80%;
-    left: 19%;
-    background-color: #0b75d8;
+    /* left column = 25%, width ~= 90px, left column padding = 20px */
+    left: calc(25% - 90px - 20px);
+    background-color: var(--highlight);
     text-align: center;
     padding: 20px;
     display: none;
